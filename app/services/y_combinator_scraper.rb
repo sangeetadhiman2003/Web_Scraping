@@ -44,12 +44,12 @@ class YCombinatorScraper
       page_source = @driver.page_source
       doc = Nokogiri::HTML(page_source)
       website_url = doc.at_css('div.group a')&.[](:href) || "N/A"
-      founders = doc.css('section.relative.isolate.z-0 div.flex.flex-row.flex-col.items-start.gap-3.md\\:flex-row').map do |founder_div|
+      founders_divs = doc.css('section.relative.isolate.z-0 div.flex.flex-row.flex-col.items-start.gap-3.md\\:flex-row, div.space-y-5 > div, div.space-y-4 > div')
+      founders = founders_divs.map do |founder_div|
         founder_name = founder_div.at_css('div.leading-snug div.font-bold')&.text&.strip
         founder_linkedin = founder_div.at_css('div.leading-snug a.bg-image-linkedin')&.[](:href)
         "#{founder_name}: #{founder_linkedin}" if founder_name && founder_linkedin
       end.compact.join(", ") || "N/A"
-      puts "URL: #{new_url}, Website URL: #{website_url}, Founders: #{founders}"
       @driver.navigate.to(@url)
       wait_for_page_load
       wait_for_specific_element('div._section_86jzd_146._results_86jzd_326')
