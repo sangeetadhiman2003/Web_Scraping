@@ -68,6 +68,9 @@ class YCombinatorScraper
     page_source = @driver.page_source
     doc = Nokogiri::HTML(page_source)
     company_listings = doc.css('div._section_86jzd_146._results_86jzd_326')
+    if company_listings.empty?
+      raise "No results found"
+    end
     file_path = 'public/companies_data.csv'
     CSV.open(file_path, "w") do |csv|
       csv << ["Company Name", "Location", "Description", "Company Yc Batch", "Founders and LinkedIn URLs", "Website URL"]
@@ -94,6 +97,11 @@ class YCombinatorScraper
     begin
       @driver.navigate.to(@url)
       wait_for_page_load
+      page_source = @driver.page_source
+      doc = Nokogiri::HTML(page_source)
+      if doc.text.include?("Sorry, no matching companies found")
+        raise "No matching companies found"
+      end
       wait_for_specific_element('div._section_86jzd_146._results_86jzd_326')
       wait_for_content_to_load
       parse_page
@@ -101,6 +109,9 @@ class YCombinatorScraper
       puts "Navigation timed out: #{e.message}"
     rescue Selenium::WebDriver::Error::WebDriverError => e
       puts "WebDriver error: #{e.message}"
+    rescue => e
+      puts "Error: #{e.message}"
+      raise e
     ensure
       @driver.quit if @driver
     end
