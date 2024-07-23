@@ -5,6 +5,8 @@ class Api::V1::CompaniesController < ApplicationController
     limit = params[:limit].to_i if params[:limit]
     filters = {
       'top_company' => params[:top_company],
+      'highlight_women' => params[:highlight_women],
+      'highlight_black' => params[:highlight_black],
       'batch' => parse_filter(params[:batch]),
       'industry' => parse_filter(params[:industry]),
       'tag' => parse_filter(params[:tag]),
