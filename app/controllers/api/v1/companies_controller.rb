@@ -1,4 +1,5 @@
 class Api::V1::CompaniesController < ApplicationController
+  before_action :validate_limit, only: [:index]
   def index
     file_path = Rails.root.join('public', 'companies_data.csv')
     base_url = 'https://www.ycombinator.com/companies'
@@ -51,5 +52,14 @@ class Api::V1::CompaniesController < ApplicationController
     filters.flat_map { |k, v|
       Array(v).map { |value| "#{CGI.escape(k)}=#{CGI.escape(value)}" }
     }.join('&').gsub('+', '%20')
+  end
+
+  def validate_limit
+    limit = params[:limit]
+    if limit.nil?
+      render json: { error: 'Limit parameter is required' }, status: :bad_request
+    elsif limit.to_i <= 0
+      render json: { error: 'Limit parameter must be a positive integer' }, status: :bad_request
+    end
   end
 end
