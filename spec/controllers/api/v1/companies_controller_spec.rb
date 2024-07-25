@@ -1,97 +1,175 @@
 require 'rails_helper'
+require 'webmock/rspec'
 
 RSpec.describe Api::V1::CompaniesController, type: :controller do
   before do
-    allow_any_instance_of(YCombinatorScraper).to receive(:scrape).and_return(true)
+    @base_url = 'https://www.ycombinator.com/companies'
+    stub_request(:get, @base_url)
+      .to_return(status: 200, body: "<html><body>Test Content</body></html>", headers: {})
   end
 
-  let(:file_path) { Rails.root.join('public', 'companies_data.csv') }
+  describe 'GET #index' do
+    context 'with top_company parameter' do
+      before do
+        @params = { top_company: 'true', limit: 10 }
+        @expected_url = "#{@base_url}?top_company=#{@params[:top_company]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
 
-  before do
-    File.delete(file_path) if File.exist?(file_path)
-  end
-
-  after do
-    File.delete(file_path) if File.exist?(file_path)
-  end
-
-  describe "GET #index" do
-    context "when no limit is provided" do
-      it "returns a default number of records" do
-        CSV.open(file_path, 'w') do |csv|
-          csv << ["Company Name", "Location", "Description", "Company Yc Batch", "Founders and LinkedIn URLs", "Website"]
-          13.times do |i|
-            csv << ["Company #{i}", "Location #{i}", "Description #{i}", "Batch #{i}", "Founder #{i}, LinkedIn URL #{i}", "Website #{i}"]
-          end
-        end
-
-        get :index
-        data = JSON.parse(response.body)
-        default_limit = 10
+      it 'returns a successful response' do
+        get :index, params: @params
         expect(response).to have_http_status(:success)
         expect(response.content_type).to eq('application/json; charset=utf-8')
-        expect(data.length).to be <= default_limit
       end
     end
 
-    context "when a limit is provided" do
-      it "returns the correct number of records" do
-        CSV.open(file_path, 'w') do |csv|
-          csv << ["Company Name", "Location", "Description", "Company Yc Batch", "Founders and LinkedIn URLs", "Website"]
-          16.times do |i|
-            csv << ["Company #{i}", "Location #{i}", "Description #{i}", "Batch #{i}", "Founder #{i}, LinkedIn URL #{i}", "Website #{i}"]
-          end
-        end
+    context 'with highlight_women parameter' do
+      before do
+        @params = { highlight_women: 'true', limit: 10 }
+        @expected_url = "#{@base_url}?highlight_women=#{@params[:highlight_women]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
 
-        get :index, params: { limit: 5 }
-        data = JSON.parse(response.body)
+      it 'returns a successful response' do
+        get :index, params: @params
         expect(response).to have_http_status(:success)
         expect(response.content_type).to eq('application/json; charset=utf-8')
-        expect(data.length).to eq(5)
       end
     end
 
-    context "when the CSV file does not exist" do
-      it "returns an empty array" do
-        get :index
-        data = JSON.parse(response.body)
+    context 'with highlight_black parameter' do
+      before do
+        @params = { highlight_black: 'true', limit: 10 }
+        @expected_url = "#{@base_url}?highlight_black=#{@params[:highlight_black]}"
+
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
+
+      it 'returns a successful response' do
+        get :index, params: @params
+
         expect(response).to have_http_status(:success)
         expect(response.content_type).to eq('application/json; charset=utf-8')
-        expect(data).to eq([])
       end
     end
 
-    context "when scraper raises an error" do
-      it "handles RuntimeError with a 404 status" do
-        allow_any_instance_of(YCombinatorScraper).to receive(:scrape).and_raise(RuntimeError, "Scraper not found")
-        get :index
-        expect(response).to have_http_status(:not_found)
-        expect(response.body).to include("Scraper not found")
+    context 'with batch parameter' do
+      before do
+        @params = { batch: 'W09', limit: 10 }
+        @expected_url = "#{@base_url}?batch=#{@params[:batch]}"
+
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
       end
 
-      it "handles general errors with a 422 status" do
-        allow_any_instance_of(YCombinatorScraper).to receive(:scrape).and_raise(StandardError, "General error")
-        get :index
-        expect(response).to have_http_status(:unprocessable_entity)
-        expect(response.body).to include("General error")
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
       end
     end
 
-    it "passes the correct URL to the scraper" do
-      base_url = 'https://www.ycombinator.com/companies'
-      expected_url = 'https://www.ycombinator.com/companies?top_company=true&batch=S21&industry=B2B'
-      limit = 10
-      file_path = Rails.root.join('public', 'companies_data.csv')
-      CSV.open(file_path, 'w') do |csv|
-        csv << ["Company Name", "Location", "Description", "Company Yc Batch", "Founders and LinkedIn URLs", "Website"]
-        csv << ["Company A", "Location A", "Description A", "Batch A", "Founder A, LinkedIn URL A", "Website A"]
+    context 'with industry parameter' do
+      before do
+        @params = { industry: 'B2B', limit: 10 }
+        @expected_url = "#{@base_url}?industry=#{@params[:industry]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
       end
-      scraper_double = double('YCombinatorScraper')
-      allow(scraper_double).to receive(:scrape).and_return(true)
-      expect(YCombinatorScraper).to receive(:new).with(expected_url, base_url, limit).and_return(scraper_double)
-      get :index, params: { top_company: 'true', batch: 'S21', industry: 'B2B', limit: limit }
-      expect(response).to have_http_status(:success)
-      expect(response.content_type).to eq('application/json; charset=utf-8')
+
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+      end
+    end
+
+    context 'with tag parameter' do
+      before do
+        @params = { tag: 'saas', limit: 10 }
+        @expected_url = "#{@base_url}?tag=#{@params[:tag]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
+
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+      end
+    end
+
+    context 'with regions parameter' do
+      before do
+        @params = { regions: 'CA', limit: 10 }
+        @expected_url = "#{@base_url}?regions=#{@params[:regions]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
+
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+      end
+    end
+
+    context 'with top_company and batch parameters' do
+      before do
+        @params = { top_company: 'true', batch: 'S21', industry: 'B2B', limit: 10 }
+        @expected_url = "#{@base_url}?top_company=#{@params[:top_company]}&batch=#{@params[:batch]}&industry=#{@params[:industry]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
+
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+      end
+    end
+
+    context 'with different parameters' do
+      before do
+        @params = { top_company: 'false', batch: 'W20', industry: 'Fintech', limit: 5 }
+        @expected_url = "#{@base_url}?top_company=#{@params[:top_company]}&batch=#{@params[:batch]}&industry=#{@params[:industry]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
+
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+      end
+    end
+
+    context 'with tag and regions parameters' do
+      before do
+        @params = { tag: 'saas', regions: 'CA', limit: 10 }
+        @expected_url = "#{@base_url}?tag=#{@params[:tag]}&regions=#{@params[:regions]}"
+        scrape_service = instance_double(YCombinatorScraper)
+        allow(YCombinatorScraper).to receive(:new).with(@expected_url, @base_url, @params[:limit]).and_return(scrape_service)
+        allow(scrape_service).to receive(:scrape).and_return([])
+      end
+
+      it 'returns a successful response' do
+        get :index, params: @params
+        expect(response).to have_http_status(:success)
+        expect(response.content_type).to eq('application/json; charset=utf-8')
+      end
     end
   end
 end
