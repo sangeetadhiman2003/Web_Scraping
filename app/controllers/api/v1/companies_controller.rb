@@ -7,6 +7,7 @@ class Api::V1::CompaniesController < ApplicationController
     filters = {
       'top_company' => params[:top_company],
       'highlight_women' => params[:highlight_women],
+      'isHiring' => params[:isHiring],
       'highlight_black' => params[:highlight_black],
       'batch' => parse_filter(params[:batch]),
       'industry' => parse_filter(params[:industry]),
